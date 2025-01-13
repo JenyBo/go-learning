@@ -1,0 +1,14 @@
+version: '3.6'
+services:
+  postgresql:
+    image: 'bitnami/postgresql:latest'
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRESQL_USERNAME=user
+      - POSTGRESQL_PASSWORD=123456
+      - POSTGRESQL_DATABASE=golearning
+    volumes:
+      - postgresql_data:/var/lib/postgres
+volumes:
+  postgresql_data: {}
