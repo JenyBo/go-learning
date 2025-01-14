@@ -35,3 +35,16 @@ func (apiCfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request
 	}
 	respondWithJson(w, 200, databaseUserToUser(user))
 }
+
+func (apiCfg *apiConfig) handleGetUser(w http.ResponseWriter, r *http.Request, user database.User) {
+	respondWithJson(w, 200, databaseUserToUser(user))
+}
+
+func (apiCfg *apiConfig) handleGetPostForUser(w http.ResponseWriter, r *http.Request, user database.User) {
+	posts, err := apiCfg.DB.GetPostsForUser(r.Context(), database.GetPostsForUserParams{UserID: user.ID, Limit: 10})
+	if err != nil {
+		responseWithError(w, 400, "Failed to get posts")
+		return
+	}
+	respondWithJson(w, 200, databasePostsToPosts(posts))
+}

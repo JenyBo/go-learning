@@ -2,9 +2,11 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/JenyBo/golearning/internal/database"
 	"github.com/go-chi/chi"
@@ -19,6 +21,12 @@ type apiConfig struct {
 }
 
 func main() {
+	feed, err := urlToFeed("https://www.reddit.com/.rss")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(feed)
+
 	godotenv.Load(".env")
 
 	portString := os.Getenv("PORT")
@@ -36,9 +44,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	database := database.New(db)
 	apiCfg := apiConfig{
-		DB: database.New(db),
+		DB: database,
 	}
+	go startScraping(database, 10, time.Minute)
 
 	router := chi.NewRouter()
 
@@ -55,6 +65,17 @@ func main() {
 	v1Router.Get("/healthz", handlerReadiness)
 	v1Router.Get("/err", handleErr)
 	v1Router.Post("/users", apiCfg.handleCreateUser)
+	v1Router.Get("/users", apiCfg.authMiddleware(apiCfg.handleGetUser))
+
+	v1Router.Post("/feeds", apiCfg.authMiddleware(apiCfg.handlerFeedCreate))
+	v1Router.Get("/feeds", apiCfg.handlerGetFeeds)
+
+	v1Router.Post("/feed-follows", apiCfg.authMiddleware(apiCfg.handlerFeedFollowCreate))
+	v1Router.Get("/feed-follows", apiCfg.authMiddleware(apiCfg.handlerFeedFollowsGet))
+	v1Router.Delete("/feed-follows/{feedFollowID}", apiCfg.authMiddleware(apiCfg.handlerFeedFollowDelete))
+
+	v1Router.Get("/posts", apiCfg.authMiddleware(apiCfg.handleGetPostForUser))
+
 	router.Mount("/v1", v1Router)
 
 	srv := &http.Server{
